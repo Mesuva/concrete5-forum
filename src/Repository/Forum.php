@@ -296,8 +296,12 @@ class Forum
             $object->setAttachmentFileId($attachment->getFileID());
         }
 
+        $this->subscribeNewForTopicChanges($topicPage);
+
         $em->persist($object);
         $em->flush();
+
+        $this->sentNotificationToTopicSubscribers($object);
 
         if ($attachment) {
             $tracker = Core::make('statistics/tracker');
@@ -371,12 +375,14 @@ class Forum
         $pkg = Core::make(PackageService::class)->getByHandle('ortic_forum');
         $em = $pkg->getEntityManager();
 
-        $topicMonitor = new ForumMonitoring();
-        $topicMonitor->setPageId($topicPage->getCollectionID());
-        $topicMonitor->setUser((new User())->getUserInfoObject()->getEntityObject());
+        if (!$this->isMonitoring($topicPage)) {
+            $topicMonitor = new ForumMonitoring();
+            $topicMonitor->setPageId($topicPage->getCollectionID());
+            $topicMonitor->setUser((new User())->getUserInfoObject()->getEntityObject());
 
-        $em->persist($topicMonitor);
-        $em->flush();
+            $em->persist($topicMonitor);
+            $em->flush();
+        }
     }
 
     /**
@@ -399,6 +405,29 @@ class Forum
         }
     }
 
+    public function subscribeNewForTopicChanges(Page $topicPage) {
+        $parentPage = \Concrete\Core\Page\Page::getByID($topicPage->getCollectionParentID());
+
+        if ($parentPage) {
+            $pkg = Core::make(PackageService::class)->getByHandle('ortic_forum');
+            $em = $pkg->getEntityManager();
+
+            $topLevelMonitors = $em
+                ->getRepository('Concrete\Package\OrticForum\Src\Entity\ForumMonitoring')
+                ->findBy(['pageId' => $parentPage->getCollectionID()]);
+
+            foreach ($topLevelMonitors as $topLevelMonitor) {
+                $topicMonitor = new ForumMonitoring();
+                $topicMonitor->setPageId($topicPage->getCollectionID());
+                $topicMonitor->setUser($topLevelMonitor->getUser());
+                $em->persist($topicMonitor);
+            }
+
+            $em->flush();
+        }
+
+    }
+
     /**
      * Send notifications to subscribers of the topic that the message belongs to
      *
@@ -411,7 +440,7 @@ class Forum
         $em = $pkg->getEntityManager();
 
         $currentUser = new User();
-
+        
         $query = $em->createQuery('SELECT m FROM \Concrete\Package\OrticForum\Src\Entity\ForumMonitoring m WHERE m.pageId = :pageId AND m.user != :user');
         $query->setParameter('pageId', $message->getPageId());
         $query->setParameter('user', $currentUser->getUserID());

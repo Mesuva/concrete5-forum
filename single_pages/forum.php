@@ -12,6 +12,28 @@ $request = Request::getInstance();
     <div class="alert alert-danger"><?= $forumError ?></div>
 <?php } ?>
 
+<div class="row">
+    <div class="col-xs-12 col-sm-9">
+
+    </div>
+    <div class="col-xs-12 col-sm-3 text-right">
+        <div class="btn-group" role="group">
+            <?php if ($user->isLoggedIn()) { ?>
+                <?php if ($isMonitoring) { ?>
+                    <a href="<?=$this->action('stopMonitoring')?>" class="btn btn-default">
+                        <?=t('Stop Monitoring Forum')?>
+                    </a>
+                <?php } else { ?>
+                    <a href="<?=$this->action('startMonitoring')?>" class="btn btn-default">
+                        <?=t('Start Monitoring Forum')?>
+                    </a>
+                <?php } ?>
+            <?php } ?>
+
+        </div>
+    </div>
+</div>
+
 <table class="table">
     <thead>
     <tr>

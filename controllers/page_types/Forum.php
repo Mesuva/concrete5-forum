@@ -47,6 +47,8 @@ class Forum extends PageTypeController
         $this->set('forumTopicSubject', '');
         $this->set('forumTopicMessage', '');
         $this->set('showViews', $trackViews);
+        $currentPage = Page::getCurrentPage();
+        $this->set('isMonitoring', $forum->isMonitoring($currentPage));
 
         $this->render('forum', 'ortic_forum');
     }
@@ -98,6 +100,49 @@ class Forum extends PageTypeController
             }
         }
 
+        return Redirect::to($this->action(''));
+    }
+
+    /**
+     * Stops the current user from receiving notifications on new answers to the current topic
+     *
+     * @return \Concrete\Core\Routing\RedirectResponse
+     */
+    public function stopMonitoring()
+    {
+        $forum = Core::make('ortic/forum');
+        $forum->unsubscribeFromTopicChanges(Page::getCurrentPage());
+
+        $topicList = $forum->getTopics();
+        $topics = $topicList->get();
+
+        foreach($topics as $topic) {
+            $forum->unsubscribeFromTopicChanges($topic);
+        }
+
+        $this->flash('forumSuccess', t('Monitoring disabled.'));
+        return Redirect::to($this->action(''));
+    }
+
+
+    /**
+     * Subscribers the current user to changes to the current topic
+     *
+     * @return \Concrete\Core\Routing\RedirectResponse
+     */
+    public function startMonitoring()
+    {
+        $forum = Core::make('ortic/forum');
+        $forum->subscribeForTopicChanges(Page::getCurrentPage());
+
+        $topicList = $forum->getTopics();
+        $topics = $topicList->get();
+
+        foreach($topics as $topic) {
+           $forum->subscribeForTopicChanges($topic);
+        }
+
+        $this->flash('forumSuccess', t('Monitoring enabled.'));
         return Redirect::to($this->action(''));
     }
 

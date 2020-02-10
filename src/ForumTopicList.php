@@ -43,8 +43,12 @@ class ForumTopicList extends PageList
         return $page;
     }
 
-    public function sortByLastActivityDate(string $dir = 'asc')
+    public function sortByLastActivityDate(string $dir = null)
     {
+        if (!$dir) {
+            $dir = 'asc';
+        }
+
         $this->query->orderBy('if(ofm.mID is null, cv.cvDateCreated, ofm.dateCreated)', $dir);
     }
 
